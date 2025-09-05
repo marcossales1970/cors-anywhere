@@ -1,20 +1,26 @@
-// api/proxy.js
+ // api/proxy.js
 import fetch from 'node-fetch';
 
 export default async function (req, res) {
   try {
-    // Pega o caminho da URL após o domínio do proxy e o decodifica
-    // Ex: /https%3A%2F%2Fwww.google.com se torna https://www.google.com
-    const decodedUrlPath = decodeURIComponent(req.url.slice(1)); 
+    // --- Adicione estes logs aqui ---
+    console.log('Original req.url:', req.url); // Loga a URL bruta que o Vercel recebeu
+    // --- Fim dos logs adicionados ---
+
+    const decodedUrlPath = decodeURIComponent(req.url.slice(1));
     const targetUrl = decodedUrlPath;
 
+    // --- Adicione este log aqui ---
+    console.log('Decoded targetUrl:', targetUrl); // Loga a URL após a decodificação e corte
+    // --- Fim dos logs adicionados ---
+
+
     if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
-        // Se ainda ocorrer este erro, o console.error abaixo será útil nos logs do Vercel
-        console.error('Invalid target URL detected:', targetUrl); 
+        console.error('Invalid target URL detected - Final check failed:', targetUrl);
         return res.status(400).send('URL de destino inválida. Deve começar com http:// ou https://.');
     }
 
-    // --- Tratamento da Requisição de Pré-Voo (OPTIONS) ---
+    // --- Restante do seu código (sem alterações) ---
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app');
       res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -23,7 +29,6 @@ export default async function (req, res) {
       return res.status(204).end();
     }
 
-    // --- Restante do seu código (sem alterações a partir daqui) ---
     const { method, headers, body } = req;
 
     const filteredHeaders = {};
@@ -52,7 +57,7 @@ export default async function (req, res) {
     res.status(response.status).send(await response.buffer());
 
   } catch (error) {
-    console.error('Erro no Proxy:', error);
+    console.error('Erro no Proxy (Catch):', error); // Renomeei para diferenciar
     res.status(500).send('Erro interno do Proxy. Verifique os logs do Vercel.');
   }
 }
