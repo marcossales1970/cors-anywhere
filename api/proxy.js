@@ -1,30 +1,31 @@
 // api/proxy.js
-import fetch from 'node-fetch'; // Certifique-se de que 'node-fetch' está instalado no seu projeto proxy (npm install node-fetch)
+import fetch from 'node-fetch';
 
 export default async function (req, res) {
   try {
-    // A URL de destino é passada como parte do caminho após o domínio do proxy
-    // Ex: https://seu-proxy.vercel.app/https://script.google.com/...
-    // req.url será '/https://script.google.com/...'
-    const targetUrl = req.url.slice(1); // Remove a barra inicial para obter a URL completa
+    // Pega o caminho da URL após o domínio do proxy e o decodifica
+    // Ex: /https%3A%2F%2Fwww.google.com se torna https://www.google.com
+    const decodedUrlPath = decodeURIComponent(req.url.slice(1)); 
+    const targetUrl = decodedUrlPath;
 
     if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
+        // Se ainda ocorrer este erro, o console.error abaixo será útil nos logs do Vercel
+        console.error('Invalid target URL detected:', targetUrl); 
         return res.status(400).send('URL de destino inválida. Deve começar com http:// ou https://.');
     }
 
     // --- Tratamento da Requisição de Pré-Voo (OPTIONS) ---
     if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app'); // Seu domínio da landing page
+      res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app');
       res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); // Permite que a landing page envie Content-Type
-      res.setHeader('Access-Control-Max-Age', '86400'); // Cacheia o pré-voo por 24 horas
-      return res.status(204).end(); // Responde com 'No Content' para um pré-voo bem-sucedido
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      return res.status(204).end();
     }
 
-    // --- Tratamento das Requisições Reais (GET, POST, etc.) ---
+    // --- Restante do seu código (sem alterações a partir daqui) ---
     const { method, headers, body } = req;
 
-    // Filtra cabeçalhos que podem causar problemas ao serem reencaminhados
     const filteredHeaders = {};
     for (const key in headers) {
       if (!['host', 'connection', 'content-length', 'content-encoding'].includes(key.toLowerCase())) {
@@ -32,27 +33,22 @@ export default async function (req, res) {
       }
     }
 
-    // Encaminha a requisição para o Google Apps Script
     const response = await fetch(targetUrl, {
       method: method,
       headers: filteredHeaders,
-      body: method === 'POST' || method === 'PUT' ? JSON.stringify(body) : undefined, // Garante que o corpo é JSON
+      body: method === 'POST' || method === 'PUT' ? JSON.stringify(body) : undefined,
     });
 
-    // Define os cabeçalhos CORS na resposta do proxy para a sua landing page
-    res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app'); // Seu domínio da landing page
+    res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Reenvia os cabeçalhos da resposta original do Google Apps Script
     response.headers.forEach((value, name) => {
-        // Evita duplicar ou sobrescrever cabeçalhos CORS que já definimos
         if (!['access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers', 'content-encoding'].includes(name.toLowerCase())) {
             res.setHeader(name, value);
         }
     });
 
-    // Envia a resposta de volta para a sua landing page
     res.status(response.status).send(await response.buffer());
 
   } catch (error) {
