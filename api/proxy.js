@@ -3,24 +3,28 @@ import fetch from 'node-fetch';
 
 export default async function (req, res) {
   try {
-    // --- Adicione estes logs aqui ---
     console.log('Original req.url:', req.url); // Loga a URL bruta que o Vercel recebeu
-    // --- Fim dos logs adicionados ---
 
-    const decodedUrlPath = decodeURIComponent(req.url.slice(1));
-    const targetUrl = decodedUrlPath;
+    let decodedUrlPath = decodeURIComponent(req.url.slice(1)); 
+    let targetUrl = decodedUrlPath;
 
-    // --- Adicione este log aqui ---
-    console.log('Decoded targetUrl:', targetUrl); // Loga a URL após a decodificação e corte
-    // --- Fim dos logs adicionados ---
+    // --- ESTE É O NOVO CÓDIGO CRÍTICO QUE ESTAVA FALTANDO ---
+    // Adiciona a segunda barra se estiver faltando (ex: http:/ para http://)
+    if (targetUrl.startsWith('http:/') && !targetUrl.startsWith('http://')) {
+        targetUrl = targetUrl.replace('http:/', 'http://');
+    } else if (targetUrl.startsWith('https:/') && !targetUrl.startsWith('https://')) {
+        targetUrl = targetUrl.replace('https:/', 'https://');
+    }
+    // --- FIM DO NOVO CÓDIGO CRÍTICO ---
 
+    console.log('Processed targetUrl (after fix):', targetUrl); // Loga a URL após a correção e decodificação
 
     if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
-        console.error('Invalid target URL detected - Final check failed:', targetUrl);
+        console.error('Invalid target URL detected - Final check failed:', targetUrl); 
         return res.status(400).send('URL de destino inválida. Deve começar com http:// ou https://.');
     }
 
-    // --- Restante do seu código (sem alterações) ---
+    // --- Tratamento da Requisição de Pré-Voo (OPTIONS) ---
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', 'https://v0-brazilian-portuguese-prompts.vercel.app');
       res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -29,6 +33,7 @@ export default async function (req, res) {
       return res.status(204).end();
     }
 
+    // --- Restante do seu código (sem alterações a partir daqui) ---
     const { method, headers, body } = req;
 
     const filteredHeaders = {};
@@ -57,7 +62,7 @@ export default async function (req, res) {
     res.status(response.status).send(await response.buffer());
 
   } catch (error) {
-    console.error('Erro no Proxy (Catch):', error); // Renomeei para diferenciar
+    console.error('Erro no Proxy:', error);
     res.status(500).send('Erro interno do Proxy. Verifique os logs do Vercel.');
   }
 }
