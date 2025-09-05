@@ -1,8 +1,9 @@
+// vercel.json (na raiz do projeto proxy)
 {
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api"
+      "destination": "/api/proxy"
     }
   ]
 }
